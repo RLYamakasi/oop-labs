@@ -1,22 +1,92 @@
-# OOP Лабораторные работы (C++)
+# Лабораторная работа №3: "Взрыв"
 
-## Описание проекта
-Набор лабораторных работ по объектно-ориентированному программированию, реализующий графический редактор фигур с использованием WinAPI.
+## 📋 Задание
+Добавление системы взрывов в программу "Матрица". Линии теперь могут взрываться с заданной вероятностью, создавая радиальную анимацию расхождения символов.
 
-## Стек технологий
-- Язык: C++
-- Система сборки: CMake 3.20+
-- Компилятор: MSVC / MinGW
+## 🎯 Цель работы
+Освоение продвинутых концепций ООП: композиция объектов, управление сложным состоянием, реализация вероятностных систем, работа с анимацией и временными интервалами.
 
-## Структура веток
-- **`develop`** — основная ветка разработки. Здесь последовательно добавляется функционал всех лабораторных (от 1 к 4).
-- **`lab-01`** — стабильная версия лабораторной работы №1. *Базовая реализация классов геометрических фигур.*
-- **`lab-02`** — стабильная версия лабораторной работы №2. *Добавлено наследование и полиморфизм для фигур.*
-- **`lab-03`** — стабильная версия лабораторной работы №3. *Реализован паттерн "Команда" для отмены/повтора действий.*
-- **`lab-04`** — стабильная версия лабораторной работы №4. *Добавлена сериализация фигур в файл.*
-- **`about`** (эта ветка) — содержит только общую документацию.
+## 🏗 Архитектура
 
-## Сборка и запуск
-1. Клонируйте репозиторий:
-   ```bash
-   git clone https://github.com/ваш-логин/oop-labs.git
+### Расширенная классовая структура:
+
+```cpp
+// 1. Взрыв (новый класс)
+class Explosion {
+private:
+    struct ExplosionParticle {
+        COORD position;     // Текущая позиция
+        COORD direction;    // Направление движения
+        wchar_t symbol;     // Символ
+        int color;          // Цвет (случайный)
+        int radius;         // Текущий радиус
+        int maxRadius;      // Максимальный радиус
+        bool active;        // Активна ли частица
+    };
+    
+    std::vector<ExplosionParticle> particles;
+    COORD epicenter;        // Центр взрыва
+    int currentRadius;      // Текущий радиус взрыва
+    int minRadius;          // Минимальный радиус
+    int maxRadius;          // Максимальный радиус
+    bool isActive;          // Активен ли взрыв
+    std::chrono::time_point<std::chrono::steady_clock> lastUpdate;
+    
+public:
+    Explosion(COORD center, int minR, int maxR);
+    void update();          // Обновление состояния
+    void render() const;    // Отрисовка взрыва
+    bool getIsActive() const;
+    void generateParticles(); // Генерация частиц для взрыва
+};
+
+// 2. Расширенный класс линии
+class Line {
+private:
+    std::vector<Symbol> symbols;
+    int length;
+    int speed;
+    bool isActive;
+    bool isExploding;       // Флаг взрыва
+    int explosionChance;    // Вероятность взрыва (1 из N)
+    int explosionsTriggered; // Количество сработавших взрывов
+    std::unique_ptr<Explosion> currentExplosion; // Текущий взрыв
+    
+    // Метод проверки взрыва
+    bool shouldExplode() const;
+    
+public:
+    Line(int length, int speed, int explosionChance);
+    void update(float deltaTime);
+    void render() const;
+    
+    // Новые методы
+    void triggerExplosion(int minRadius, int maxRadius);
+    void shortenLine();     // Укорачивание линии на 1 символ
+    bool getIsAlive() const; // Проверка, есть ли еще символы
+};
+
+// 3. Расширенный менеджер приложения
+class AppManager {
+private:
+    std::vector<std::unique_ptr<Line>> lines;
+    std::vector<std::unique_ptr<Explosion>> explosions;
+    int spawnRate;
+    int speed;
+    int length;
+    bool epilepsyMode;
+    int explosionChance;    // 1 из N
+    int minExplosionRadius;
+    int maxExplosionRadius;
+    
+    // Новые методы
+    void updateExplosions(float deltaTime);
+    void removeFinishedExplosions();
+    void checkLineExplosions();
+    
+public:
+    AppManager(int spawnRate, int speed, int length, 
+               bool epilepsyMode, int explosionChance,
+               int minRadius, int maxRadius);
+    void run();
+};
